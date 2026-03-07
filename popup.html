@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Resource Tracker</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #0f172a;
+        color: #f8fafc;
+        width: 420px;
+        min-width: 420px;
+        max-width: 420px;
+        min-height: 320px;
+        box-sizing: border-box;
+        overflow: auto;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 0 12px;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: #38bdf8;
+      }
+      #status {
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .participant-box {
+        margin-bottom: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.6);
+        overflow: hidden;
+      }
+      .participant-box summary {
+        cursor: pointer;
+        padding: 12px;
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        user-select: none;
+      }
+      .participant-box summary::-webkit-details-marker {
+        color: #38bdf8;
+      }
+      .participant-content {
+        padding: 0 12px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .participant-content label {
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #cbd5f5;
+      }
+      .participant-input-row {
+        display: flex;
+        gap: 6px;
+      }
+      #participant-id-input {
+        flex: 1;
+        min-width: 0;
+        background: rgba(15, 23, 42, 0.85);
+        color: #f8fafc;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        border-radius: 6px;
+        padding: 8px;
+        font-size: 13px;
+      }
+      #participant-save,
+      #participant-edit {
+        border: none;
+        border-radius: 6px;
+        padding: 8px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #0f172a;
+        cursor: pointer;
+      }
+      #participant-save {
+        background: linear-gradient(135deg, #22d3ee, #38bdf8);
+      }
+      #participant-edit {
+        background: linear-gradient(135deg, #fcd34d, #f59e0b);
+      }
+      #participant-feedback {
+        font-size: 12px;
+        color: #cbd5f5;
+        min-height: 16px;
+      }
+      .participant-gate-banner {
+        margin-bottom: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        border-radius: 8px;
+        background: rgba(100, 116, 139, 0.2);
+        color: #e2e8f0;
+        padding: 10px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+      .participant-gate-banner.gated {
+        background: rgba(100, 116, 139, 0.12);
+        border-color: rgba(148, 163, 184, 0.35);
+        color: #cbd5e1;
+        filter: grayscale(0.35);
+        opacity: 0.8;
+      }
+      #popup-main-content.gated {
+        opacity: 0.4;
+        filter: grayscale(0.25);
+        pointer-events: none;
+        user-select: none;
+      }
+      #token-count {
+        font-size: 14px;
+        margin-top: 6px;
+        color: #e2e8f0;
+      }
+      .toggle-wrapper {
+        margin-top: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .toggle-wrapper label {
+        font-size: 13px;
+        color: #cbd5f5;
+      }
+      #toggle-extension {
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #0f172a;
+        cursor: pointer;
+        transition: transform 0.1s ease, box-shadow 0.1s ease;
+      }
+      #toggle-extension.enabled {
+        background: linear-gradient(135deg, #f87171, #ef4444);
+        box-shadow: 0 4px 12px rgba(248, 113, 113, 0.35);
+      }
+      #toggle-extension.disabled {
+        background: linear-gradient(135deg, #34d399, #10b981);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+      }
+      #toggle-extension:active {
+        transform: scale(0.98);
+      }
+      .metrics {
+        margin-top: 16px;
+        padding: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.6);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .metrics h2 {
+        margin: 0;
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #94a3b8;
+      }
+      .metric-line {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .metric-title {
+        font-size: 12px;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: #cbd5f5;
+      }
+      .metric-value {
+        font-size: 15px;
+        font-weight: 600;
+        color: #38bdf8;
+      }
+      .note {
+        font-size: 12px;
+        margin-top: 12px;
+        color: #cbd5f5;
+      }
+      .today-vs-average {
+        margin-top: 12px;
+        padding: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.6);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .today-vs-average h2 {
+        margin: 0;
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #94a3b8;
+      }
+      .compare-line {
+        font-size: 13px;
+        color: #e2e8f0;
+      }
+      .daily-goal {
+        margin-top: 12px;
+        padding: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.6);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .daily-goal h2 {
+        margin: 0;
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #94a3b8;
+      }
+      .goal-input-row {
+        display: flex;
+        gap: 8px;
+      }
+      #goal-input {
+        flex: 1;
+        min-width: 0;
+        background: rgba(15, 23, 42, 0.85);
+        color: #f8fafc;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        border-radius: 6px;
+        padding: 8px;
+        font-size: 13px;
+      }
+      #goal-save {
+        border: none;
+        border-radius: 6px;
+        padding: 8px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #0f172a;
+        background: linear-gradient(135deg, #22d3ee, #38bdf8);
+        cursor: pointer;
+      }
+      .goal-line {
+        font-size: 13px;
+        color: #e2e8f0;
+      }
+      .rolling-chart {
+        margin-top: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.6);
+        overflow: hidden;
+      }
+      .rolling-chart summary {
+        cursor: pointer;
+        padding: 12px;
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        user-select: none;
+      }
+      .rolling-chart summary::-webkit-details-marker {
+        color: #38bdf8;
+      }
+      .chart-wrap {
+        padding: 0 12px 12px;
+      }
+      .chart-main {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+      }
+      .chart-scroll {
+        flex: 1;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 2px;
+      }
+      .chart-axis {
+        height: 120px;
+        width: 56px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: flex-end;
+      }
+      .chart-axis-label {
+        font-size: 10px;
+        color: #cbd5f5;
+        line-height: 1;
+      }
+      .chart-grid {
+        height: 120px;
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 20px;
+        column-gap: 10px;
+        align-items: flex-end;
+        width: max-content;
+        min-width: 100%;
+      }
+      .chart-bar {
+        border-radius: 6px 6px 2px 2px;
+        background: linear-gradient(180deg, #38bdf8, #0ea5e9);
+        min-height: 4px;
+      }
+      .chart-labels {
+        margin-top: 6px;
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 20px;
+        column-gap: 10px;
+        width: max-content;
+        min-width: 100%;
+      }
+      .chart-label {
+        font-size: 10px;
+        color: #cbd5f5;
+        text-align: center;
+      }
+      .chart-empty {
+        font-size: 12px;
+        color: #cbd5f5;
+      }
+      .chart-total {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #e2e8f0;
+      }
+      .all-time-totals {
+        margin-top: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.6);
+        overflow: hidden;
+      }
+      .all-time-totals h2 {
+        margin: 0;
+        padding: 12px 12px 0;
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #94a3b8;
+      }
+      .all-time-content {
+        padding: 8px 12px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .all-time-line {
+        font-size: 13px;
+        color: #e2e8f0;
+      }
+      .all-time-equivalents {
+        margin-top: 8px;
+        padding: 10px;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        border-radius: 8px;
+        background: rgba(14, 116, 144, 0.12);
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .all-time-equivalents-title {
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #7dd3fc;
+      }
+      .all-time-equivalent-line {
+        font-size: 12px;
+        color: #e2e8f0;
+      }
+      .model-chart {
+        margin-top: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.6);
+        overflow: hidden;
+      }
+      .model-chart summary {
+        cursor: pointer;
+        padding: 12px;
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        user-select: none;
+      }
+      .model-chart-wrap {
+        padding: 0 12px 12px;
+      }
+      .model-chart-main {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+      }
+      .model-chart-scroll {
+        flex: 1;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 2px;
+      }
+      .model-chart-axis {
+        height: 120px;
+        width: 44px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: flex-end;
+      }
+      .model-chart-grid {
+        height: 120px;
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 20px;
+        column-gap: 10px;
+        align-items: flex-end;
+        width: max-content;
+        min-width: 100%;
+      }
+      .model-day-stack {
+        height: 120px;
+        border-radius: 6px 6px 2px 2px;
+        overflow: hidden;
+        background: rgba(148, 163, 184, 0.15);
+        display: flex;
+        flex-direction: column-reverse;
+      }
+      .model-segment {
+        width: 100%;
+        min-height: 1px;
+      }
+      .model-chart-labels {
+        margin-top: 6px;
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 20px;
+        column-gap: 10px;
+        width: max-content;
+        min-width: 100%;
+      }
+      .model-chart-label {
+        font-size: 10px;
+        color: #cbd5f5;
+        text-align: center;
+      }
+      .model-chart-empty {
+        font-size: 12px;
+        color: #cbd5f5;
+      }
+      .model-legend {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .model-note {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #cbd5f5;
+      }
+      .model-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: #e2e8f0;
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 999px;
+        padding: 4px 8px;
+      }
+      .model-legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        flex-shrink: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <details class="participant-box" id="participant-details">
+      <summary id="participant-summary-label">Participant ID: Not set</summary>
+      <div class="participant-content">
+        <label for="participant-id-input">Participant ID</label>
+        <div class="participant-input-row">
+          <input id="participant-id-input" type="text" inputmode="numeric" placeholder="Enter participant ID" />
+          <button id="participant-save">Save</button>
+          <button id="participant-edit">Edit</button>
+        </div>
+        <div id="participant-feedback"></div>
+      </div>
+    </details>
+    <div id="participant-gate-banner" class="participant-gate-banner" hidden>Please save unique user ID to continue</div>
+    <div id="popup-main-content">
+      <h1>AI detected:</h1>
+      <div id="status">Checking current tab...</div>
+      <div id="token-count">Tokens detected: --</div>
+      <div class="toggle-wrapper">
+        <label>Extension status</label>
+        <button id="toggle-extension" class="enabled">Turn off detector</button>
+      </div>
+      <div id="metrics-content">
+      <section class="metrics">
+        <h2>Estimated Impact</h2>
+        <div class="metric-line">
+          <span class="metric-title">Electricity consumed</span>
+          <strong class="metric-value" id="metric-energy">-- Wh</strong>
+        </div>
+        <div class="metric-line">
+          <span class="metric-title">CO2 produced</span>
+          <strong class="metric-value" id="metric-co2">-- g</strong>
+        </div>
+        <div class="metric-line">
+          <span class="metric-title">Water consumed</span>
+          <strong class="metric-value" id="metric-water">-- ml</strong>
+        </div>
+      </section>
+      <section class="all-time-totals">
+        <h2>Total Metrics Since Start</h2>
+        <div class="all-time-content">
+          <div class="all-time-line" id="all-time-tokens">Tokens: --</div>
+          <div class="all-time-line" id="all-time-electricity">Electricity: -- Wh</div>
+          <div class="all-time-line" id="all-time-co2">CO2: -- g</div>
+          <div class="all-time-line" id="all-time-water">Water: -- ml</div>
+          <div class="all-time-equivalents">
+            <div class="all-time-equivalents-title">Equivalants</div>
+            <div class="all-time-equivalent-line" id="all-time-equivalent-electricity">Electricity: --</div>
+            <div class="all-time-equivalent-line" id="all-time-equivalent-co2">CO2: --</div>
+            <div class="all-time-equivalent-line" id="all-time-equivalent-water">Water: --</div>
+          </div>
+        </div>
+      </section>
+      <section class="today-vs-average">
+        <h2>Today vs Your Average</h2>
+        <div class="compare-line" id="compare-today">Today: -- tokens</div>
+        <div class="compare-line" id="compare-average">Average: -- tokens/day</div>
+        <div class="compare-line" id="compare-delta">Difference: --</div>
+      </section>
+      <section class="daily-goal">
+        <h2>Daily Goal</h2>
+        <div class="goal-input-row">
+          <input id="goal-input" type="number" min="1" step="1" placeholder="Set token goal (e.g. 5000)" />
+          <button id="goal-save">Save</button>
+        </div>
+        <div class="goal-line" id="goal-current">Goal: --</div>
+        <div class="goal-line" id="goal-progress">Progress: --</div>
+        <div class="goal-line" id="goal-remaining">Remaining: --</div>
+      </section>
+      <details class="rolling-chart">
+        <summary>Daily token count (up to 60d)</summary>
+        <div class="chart-wrap">
+          <div class="chart-main">
+            <div class="chart-axis" id="rolling-chart-axis">
+              <div class="chart-axis-label" id="rolling-axis-max">-- tokens</div>
+              <div class="chart-axis-label" id="rolling-axis-mid">-- tokens</div>
+              <div class="chart-axis-label" id="rolling-axis-min">0 tokens</div>
+            </div>
+            <div class="chart-scroll" id="rolling-chart-scroll">
+              <div class="chart-grid" id="rolling-chart-grid"></div>
+              <div class="chart-labels" id="rolling-chart-labels"></div>
+            </div>
+          </div>
+          <div class="chart-empty" id="rolling-chart-empty" hidden>No token history yet.</div>
+        </div>
+      </details>
+      <details class="model-chart">
+        <summary>Daily Model Mix (up to 60d)</summary>
+        <div class="model-chart-wrap">
+          <div class="model-chart-main">
+            <div class="model-chart-axis" id="model-chart-axis">
+              <div class="chart-axis-label">100%</div>
+              <div class="chart-axis-label">50%</div>
+              <div class="chart-axis-label">0%</div>
+            </div>
+            <div class="model-chart-scroll" id="model-chart-scroll">
+              <div class="model-chart-grid" id="model-chart-grid"></div>
+              <div class="model-chart-labels" id="model-chart-labels"></div>
+            </div>
+          </div>
+          <div class="model-chart-empty" id="model-chart-empty" hidden>No model usage data yet.</div>
+          <div class="model-legend" id="model-chart-legend"></div>
+          <div class="model-note">Selecting lower-compute AI models can reduce computing time, energy consumption, and environmental impacts.</div>
+        </div>
+      </details>
+      </div>
+      <div class="note">Equivalants are estimated from published literature and research, and should be treated as approximate indicators.</div>
+    </div>
+    <script src="thresholds.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

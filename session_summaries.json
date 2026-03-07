@@ -1,0 +1,51 @@
+﻿{
+    "session_summaries":  [
+                              {
+                                  "user_code":  "U001",
+                                  "session_id":  "f9401454-0cfe-4962-ae4a-292be560d9a7",
+                                  "session_start_utc":  "2026-02-09T12:00:21Z",
+                                  "session_end_utc":  "2026-02-09T12:00:33Z",
+                                  "interactions":  2,
+                                  "total_tokens":  54,
+                                  "total_energy_Wh":  0.03,
+                                  "total_co2_g":  0.01,
+                                  "total_water_L":  0.01,
+                                  "mean_tokens_per_interaction":  27
+                              },
+                              {
+                                  "user_code":  "U001",
+                                  "session_id":  "20dbb2d9-0f14-41b7-9f06-c2f948952e42",
+                                  "session_start_utc":  "2026-02-09T11:47:37Z",
+                                  "session_end_utc":  "2026-02-09T12:00:01Z",
+                                  "interactions":  1,
+                                  "total_tokens":  30,
+                                  "total_energy_Wh":  0.02,
+                                  "total_co2_g":  0.01,
+                                  "total_water_L":  0,
+                                  "mean_tokens_per_interaction":  30
+                              },
+                              {
+                                  "user_code":  "U001",
+                                  "session_id":  "c4032a1c-9930-42f6-b852-cc5ff61f1a2a",
+                                  "session_start_utc":  "2026-02-09T12:10:33Z",
+                                  "session_end_utc":  "2026-02-09T12:10:46Z",
+                                  "interactions":  2,
+                                  "total_tokens":  343,
+                                  "total_energy_Wh":  0.17,
+                                  "total_co2_g":  0.07,
+                                  "total_water_L":  0.03,
+                                  "mean_tokens_per_interaction":  172
+                              }
+                          ],
+    "user_summaries":  {
+                           "user_code":  "U001",
+                           "user_id":  "95663c1d-5643-447a-9654-72a05c7925bf",
+                           "first_seen_utc":  "2026-02-09T11:47:37Z",
+                           "last_seen_utc":  "2026-02-09T12:10:46Z",
+                           "interactions":  5,
+                           "total_tokens":  427,
+                           "total_energy_Wh":  0.21,
+                           "total_co2_g":  0.09,
+                           "total_water_L":  0.04
+                       }
+}
