@@ -26,7 +26,7 @@ This lightweight Chrome extension watches every tab you open, looks for hints th
 ## How the impact estimates work
 - Electricity: Assumes 0.00083 Wh/token (~0.83 Wh per 1k output tokens).
 - CO2: Assumes 0.43 mg/token (0.00043 g/token, ~0.43 g per 1k output tokens).
-- Water: Assumes 0.01 ml/token (0.00001 L/token, ~10 ml per 1k output tokens).
+- Water: Assumes 0.02 ml/token (0.00002 L/token, ~20 ml per 1k output tokens).
 
 These numbers are intentionally conservative heuristics inspired by a mix of public reports. Adjust `IMPACT_CONSTANTS` in `contentScript.js` if you want to plug in different assumptions.
 

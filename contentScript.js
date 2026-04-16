@@ -272,8 +272,8 @@ const USER_INPUT_SELECTORS = [
 const IMPACT_EQUATION_CONSTANTS = {
   energyWhPerInputToken: 0.000083,
   energyWhPerOutputToken: 0.00083,
-  waterMlPerInputToken: 0.001,
-  waterMlPerOutputToken: 0.01,
+  waterMlPerInputToken: 0.002,
+  waterMlPerOutputToken: 0.02,
   co2MgPerInputToken: 0.043,
   co2MgPerOutputToken: 0.43,
   thinkingScalarEnabled: 2.1,
