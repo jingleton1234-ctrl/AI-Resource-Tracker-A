@@ -69,6 +69,12 @@ const MODEL_MIX_COLOR_PALETTE = [
   "#3b82f6"
 ];
 const ROLLING_HISTORY_DAYS = 60;
+const AUTO_REASONING_LABEL = "Auto reasoning";
+const EXTENDED_REASONING_LABEL = "Extended reasoning";
+const REASONING_COLOR_MAP = {
+  [AUTO_REASONING_LABEL]: "#0ea5e9",
+  [EXTENDED_REASONING_LABEL]: "#ef4444"
+};
 let environmentalMetricsVisible = false;
 
 const formatUnlockLabel = (timestampMs) => {
@@ -363,7 +369,7 @@ const getRollingModelMixSeries = (totals, days = 7) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const series = [];
-  const discoveredModelSet = new Set();
+  const discoveredModelSet = new Set([AUTO_REASONING_LABEL, EXTENDED_REASONING_LABEL]);
 
   for (let i = days - 1; i >= 0; i -= 1) {
     const pointDate = shiftDate(today, -i);
@@ -375,13 +381,26 @@ const getRollingModelMixSeries = (totals, days = 7) => {
     const modelCountsRaw = dayRecord?.modelCounts && typeof dayRecord.modelCounts === "object"
       ? dayRecord.modelCounts
       : {};
-    const modelEntries = Object.entries(modelCountsRaw)
-      .map(([model, count]) => ({
-        model: (model || "Unknown").trim() || "Unknown",
-        count: Number(count) || 0
-      }))
-      .filter((entry) => entry.count > 0)
-      .sort((a, b) => b.count - a.count);
+    const reasoningModeCountsRaw = dayRecord?.reasoningModeCounts && typeof dayRecord.reasoningModeCounts === "object"
+      ? dayRecord.reasoningModeCounts
+      : {};
+    const totalInteractions = Math.max(
+      0,
+      Number(dayRecord?.interactions) || 0,
+      Object.values(modelCountsRaw).reduce((sum, count) => sum + (Number(count) || 0), 0)
+    );
+    const extendedReasoningCount = Math.max(
+      0,
+      Math.min(
+        totalInteractions,
+        Object.values(reasoningModeCountsRaw).reduce((sum, count) => sum + (Number(count) || 0), 0)
+      )
+    );
+    const autoReasoningCount = Math.max(0, totalInteractions - extendedReasoningCount);
+    const modelEntries = [
+      { model: AUTO_REASONING_LABEL, count: autoReasoningCount },
+      { model: EXTENDED_REASONING_LABEL, count: extendedReasoningCount }
+    ].filter((entry) => entry.count > 0);
     const total = modelEntries.reduce((sum, entry) => sum + entry.count, 0);
     modelEntries.forEach((entry) => discoveredModelSet.add(entry.model));
 
@@ -406,7 +425,7 @@ const buildModelColorMap = (models) => {
   const orderedModels = Array.isArray(models) ? [...models].sort((a, b) => a.localeCompare(b)) : [];
   const colorMap = {};
   orderedModels.forEach((model, index) => {
-    colorMap[model] = MODEL_MIX_COLOR_PALETTE[index % MODEL_MIX_COLOR_PALETTE.length];
+    colorMap[model] = REASONING_COLOR_MAP[model] || MODEL_MIX_COLOR_PALETTE[index % MODEL_MIX_COLOR_PALETTE.length];
   });
   return colorMap;
 };

@@ -111,12 +111,20 @@ const PROVIDER_LABEL_TO_KEY = {
 const MODEL_CONTEXT_SELECTORS = [
   "header",
   "nav",
+  "footer",
+  "form",
   "[role='navigation']",
   "[role='banner']",
+  "[data-testid='composer']",
+  "[data-testid*='composer']",
+  "[data-testid*='prompt']",
+  "[data-testid*='footer']",
   "[data-testid*='model']",
   "[data-testid*='mode']",
   "[aria-label*='model' i]",
   "[aria-label*='mode' i]",
+  "[aria-label*='thinking' i]",
+  "[aria-label*='extended' i]",
   "button",
   "[role='button']"
 ];
@@ -124,12 +132,27 @@ const MODEL_CONTEXT_SLICE_LIMIT = 6000;
 
 const PROVIDER_MODEL_RULES = {
   chatgpt: [
-    { model: "Thinking", confidence: 0.95, patterns: [/\bthinking\b/i] },
+    {
+      model: "Thinking",
+      confidence: 0.95,
+      patterns: [
+        /\bextended\s+thinking\b/i,
+        /\bextended\b/i,
+        /\bthinking\b/i
+      ]
+    },
     { model: "Instant", confidence: 0.95, patterns: [/\binstant\b/i] }
   ],
   gemini: [
     { model: "Pro", confidence: 0.95, patterns: [/\bpro\b/i] },
-    { model: "Thinking", confidence: 0.95, patterns: [/\bthinking\b/i] },
+    {
+      model: "Thinking",
+      confidence: 0.95,
+      patterns: [
+        /\bextended\s+thinking\b/i,
+        /\bthinking\b/i
+      ]
+    },
     { model: "Fast", confidence: 0.95, patterns: [/\bfast\b/i, /\bflash\b/i] }
   ],
   copilot: [
@@ -139,6 +162,7 @@ const PROVIDER_MODEL_RULES = {
     { model: "Smart", confidence: 0.9, patterns: [/\bsmart\b/i] }
   ],
   claude: [
+    { model: "Adaptive Thinking", confidence: 0.95, patterns: [/\badaptive\s+thinking\b/i] },
     { model: "Opus", confidence: 0.95, patterns: [/\bopus\b/i] },
     { model: "Sonnet", confidence: 0.95, patterns: [/\bsonnet\b/i] },
     { model: "Haiku", confidence: 0.95, patterns: [/\bhaiku\b/i] }
@@ -147,6 +171,20 @@ const PROVIDER_MODEL_RULES = {
     { model: "Sonar", confidence: 0.95, patterns: [/\bsonar\b/i] },
     { model: "Model", confidence: 0.7, patterns: [/\bmodel\b/i] }
   ]
+};
+
+const REASONING_MODE_PATTERNS = {
+  chatgpt: [/\bextended\s+thinking\b/i, /\bextended\b/i, /\bthinking\b/i],
+  claude: [/\badaptive\s+thinking\b/i],
+  gemini: [/\bthinking\b/i, /\bpro\b/i],
+  copilot: [/\bthink\s+deeper\b/i, /\bstudy\s+and\s+learn\b/i]
+};
+
+const REASONING_MODE_PROVIDER_LABELS = {
+  chatgpt: "ChatGPT",
+  claude: "Claude",
+  gemini: "Gemini",
+  copilot: "Copilot"
 };
 
 const BANNER_ID = "ai-detector-banner";
@@ -283,7 +321,8 @@ let latestDetection = null;
 let latestModelDetection = {
   provider: "unknown",
   model: "unknown",
-  confidence: 0
+  confidence: 0,
+  reasoningMode: false
 };
 let latestTokenEstimate = 0;
 let latestOutputTokenEstimate = 0;
@@ -476,17 +515,20 @@ const matchesSelectorList = (node, selectors) => {
 const isUserInputElement = (node) => matchesSelectorList(node, USER_INPUT_SELECTORS);
 const USER_INPUT_TEXT_SELECTORS = USER_INPUT_SELECTORS.filter((selector) => selector !== "form");
 
-const isThinkingModeEnabled = (modelDetection = latestModelDetection) => {
+const isReasoningMode = (modelDetection = latestModelDetection) => {
   const provider = String(modelDetection?.provider || "").toLowerCase();
-  const model = String(modelDetection?.model || "").toLowerCase();
-
-  return (
-    (provider === "chatgpt" && model === "thinking")
-    || (provider === "gemini" && model === "thinking")
-    || (provider === "copilot" && model === "think deeper")
-    || (provider === "claude" && model === "opus")
-  );
+  if (!provider) {
+    return false;
+  }
+  if (modelDetection?.reasoningMode === true) {
+    return true;
+  }
+  const model = String(modelDetection?.model || "").trim();
+  const patterns = REASONING_MODE_PATTERNS[provider] || [];
+  return patterns.some((pattern) => pattern.test(model));
 };
+
+const isThinkingModeEnabled = (modelDetection = latestModelDetection) => isReasoningMode(modelDetection);
 
 const getThinkingScalar = (modelDetection = latestModelDetection) => {
   return isThinkingModeEnabled(modelDetection)
@@ -1114,6 +1156,7 @@ const updateBanner = (label, tokenCount, impactMetrics, outputTokenCountRaw = la
       detectedLabel: detectedLabel,
       modelProvider: modelDetection?.provider || "unknown",
       modelName: modelDetection?.model || "unknown",
+      reasoningMode: isReasoningMode(modelDetection),
       quickFollowupWithin30s: !!latestQuickFollowupMeta?.isQuickFollowup,
       sessionId: sessionId,
       interactionId: interactionId,
@@ -1229,16 +1272,28 @@ const addUsageToDailyTotals = (usage) => {
         co2_g: 0,
         water_L: 0,
         interactions: 0,
-        modelCounts: {}
+        modelCounts: {},
+        reasoningModeCounts: {}
       };
 
       const existingModelCounts = todayTotals?.modelCounts && typeof todayTotals.modelCounts === "object"
         ? { ...todayTotals.modelCounts }
         : {};
+      const existingReasoningModeCounts = todayTotals?.reasoningModeCounts && typeof todayTotals.reasoningModeCounts === "object"
+        ? { ...todayTotals.reasoningModeCounts }
+        : {};
       const modelLabelRaw = typeof usage?.modelName === "string" ? usage.modelName.trim() : "";
       const modelLabel = modelLabelRaw || "Unknown";
-      existingModelCounts[modelLabel] = (Number(existingModelCounts[modelLabel]) || 0)
-        + ((Number(usage?.interactions) || 0) > 0 ? (Number(usage?.interactions) || 0) : 0);
+      const interactionCount = (Number(usage?.interactions) || 0) > 0 ? (Number(usage?.interactions) || 0) : 0;
+      existingModelCounts[modelLabel] = (Number(existingModelCounts[modelLabel]) || 0) + interactionCount;
+
+      if (usage?.reasoningMode) {
+        const providerKey = String(usage?.modelProvider || "").toLowerCase();
+        const providerLabel = REASONING_MODE_PROVIDER_LABELS[providerKey]
+          || (providerKey ? providerKey.charAt(0).toUpperCase() + providerKey.slice(1) : "Unknown");
+        existingReasoningModeCounts[providerLabel] = (Number(existingReasoningModeCounts[providerLabel]) || 0)
+          + interactionCount;
+      }
 
       const nextTotals = {
         tokensIn: +(todayTotals.tokensIn + (Number(usage?.tokensIn) || 0)).toFixed(6),
@@ -1248,7 +1303,8 @@ const addUsageToDailyTotals = (usage) => {
         co2_g: +(todayTotals.co2_g + (Number(usage?.co2_g) || 0)).toFixed(6),
         water_L: +(todayTotals.water_L + (Number(usage?.water_L) || 0)).toFixed(6),
         interactions: (Number(todayTotals.interactions) || 0) + (Number(usage?.interactions) || 0),
-        modelCounts: existingModelCounts
+        modelCounts: existingModelCounts,
+        reasoningModeCounts: existingReasoningModeCounts
       };
 
       currentTotals[dateKey] = nextTotals;
@@ -1320,7 +1376,8 @@ const logSessionData = async (data) => {
   const impactDelta = createImpactMetrics(inputTokens, outputTokensDelta, {
     provider: modelProvider,
     model: modelName,
-    confidence: Number(latestModelDetection?.confidence) || 0
+    confidence: Number(latestModelDetection?.confidence) || 0,
+    reasoningMode: data?.reasoningMode === true
   });
   accumulatedOutputTokens = +((Number(accumulatedOutputTokens) || 0) + outputTokensDelta).toFixed(6);
   accumulatedImpactTotals = addImpactMetrics(accumulatedImpactTotals, impactDelta);
@@ -1381,7 +1438,8 @@ const logSessionData = async (data) => {
     topic: combinedTopicAnalysis.topic,
     topicScore: combinedTopicAnalysis.score,
     modelProvider: modelProvider,
-    modelName: modelName
+    modelName: modelName,
+    reasoningMode: data?.reasoningMode === true
   };
   addUsageToDailyTotals({
     tokensIn: inputTokens,
@@ -1390,7 +1448,9 @@ const logSessionData = async (data) => {
     wh: Number(impactDelta?.energyWh) || 0,
     co2_g: Number(impactDelta?.co2g) || 0,
     water_L: Number(impactDelta?.waterL) || 0,
+    modelProvider: modelProvider,
     modelName: modelName,
+    reasoningMode: data?.reasoningMode === true,
     interactions: 1
   });
   try {
@@ -1478,7 +1538,7 @@ const resetConversationState = () => {
   latestAiOutputText = "";
   resetAccumulatedTotals();
   latestDetection = null;
-  latestModelDetection = { provider: "unknown", model: "unknown", confidence: 0 };
+  latestModelDetection = { provider: "unknown", model: "unknown", confidence: 0, reasoningMode: false };
   pendingNetworkResponse = false;
   lastPromptSubmittedAt = 0;
   lastPromptMarkAt = 0;
@@ -1638,6 +1698,46 @@ const collectModelContextText = () => {
     });
   });
 
+  // ChatGPT's mode chip can live in the composer footer near the prompt box,
+  // so sample that area directly instead of relying only on header navigation.
+  USER_INPUT_TEXT_SELECTORS.forEach((selector) => {
+    const inputs = document.querySelectorAll(selector);
+    inputs.forEach((input, index) => {
+      if (index >= 4 || !isVisibleElement(input)) {
+        return;
+      }
+      const form = typeof input.closest === "function" ? input.closest("form") : null;
+      const container = form || (typeof input.closest === "function"
+        ? input.closest("[data-testid='composer'], [data-testid*='composer'], footer, section, div")
+        : null);
+      if (!container || !isVisibleElement(container)) {
+        return;
+      }
+      appendSample(normalizeUiLabel(container.innerText || "", 200));
+      const controls = container.querySelectorAll(
+        [
+          "button",
+          "[role='button']",
+          "[aria-label*='thinking' i]",
+          "[aria-label*='extended' i]",
+          "[data-testid*='mode']",
+          "[data-testid*='composer']"
+        ].join(",")
+      );
+      controls.forEach((control, controlIndex) => {
+        if (controlIndex >= 12 || !isVisibleElement(control)) {
+          return;
+        }
+        appendSample(normalizeUiLabel(control.innerText || "", 120));
+        if (typeof control.getAttribute === "function") {
+          appendSample(normalizeUiLabel(control.getAttribute("aria-label") || "", 120));
+          appendSample(normalizeUiLabel(control.getAttribute("title") || "", 120));
+          appendSample(normalizeUiLabel(control.getAttribute("data-testid") || "", 120));
+        }
+      });
+    });
+  });
+
   const scopedText = samples.join(" ").slice(0, MODEL_CONTEXT_SLICE_LIMIT);
   return scopedText.trim();
 };
@@ -1645,11 +1745,12 @@ const collectModelContextText = () => {
 const detectModelFromPage = (providerLabel) => {
   const provider = PROVIDER_LABEL_TO_KEY[providerLabel] || "unknown";
   if (provider === "unknown") {
-    return { provider, model: "unknown", confidence: 0 };
+    return { provider, model: "unknown", confidence: 0, reasoningMode: false };
   }
 
   const rules = PROVIDER_MODEL_RULES[provider] || [];
   const contextText = collectModelContextText();
+  const reasoningMode = isReasoningMode({ provider, model: contextText });
   let bestMatch = null;
 
   rules.forEach((rule) => {
@@ -1668,15 +1769,18 @@ const detectModelFromPage = (providerLabel) => {
   });
 
   if (bestMatch) {
-    return bestMatch;
+    return {
+      ...bestMatch,
+      reasoningMode
+    };
   }
 
   // ChatGPT "Auto" is often implicit and not shown as a visible label.
   if (provider === "chatgpt") {
-    return { provider, model: "Auto", confidence: 0.35 };
+    return { provider, model: "Auto", confidence: 0.35, reasoningMode };
   }
 
-  return { provider, model: "unknown", confidence: 0 };
+  return { provider, model: "unknown", confidence: 0, reasoningMode };
 };
 
 const getDocumentTextWithoutInputs = () => {
@@ -2918,7 +3022,7 @@ const runDetection = () => {
   const keywordMatch = domainMatch || findByKeywords();
   latestDetection = keywordMatch;
   if (!latestDetection) {
-    latestModelDetection = { provider: "unknown", model: "unknown", confidence: 0 };
+    latestModelDetection = { provider: "unknown", model: "unknown", confidence: 0, reasoningMode: false };
     resetAccumulatedTotals();
     latestAiOutputText = "";
     updateBanner(null, latestTokenEstimate, latestImpactMetrics, latestOutputTokenEstimate);
