@@ -1,4 +1,4 @@
-﻿# AI Detector Chrome Extension
+﻿# AI Detector Extension
 
 This lightweight Chrome extension watches every tab you open, looks for hints that you're on an AI-powered experience (ChatGPT, Claude, Gemini, Copilot, etc.), and surfaces a small banner inside the page with the message `AI detected: <service>`. The same message — plus an estimated token count for the visible AI response — is mirrored in the extension popup when you click the toolbar icon.
 
